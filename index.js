@@ -14,7 +14,7 @@ async function startServer() {
             user: process.env.DB_USER || 'code_aqu_inv_user',
             password: process.env.DB_PASSWORD || 'asdhSFBJ@45gf5'
         });
-        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`);
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME || 'thaha_inventory'}\`;`);
         await connection.end();
 
         // Sync Sequelize
