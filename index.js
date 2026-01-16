@@ -3,15 +3,15 @@ const { sequelize } = require('./src/models');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 async function startServer() {
     try {
         // Create DB if not exists
         const connection = await mysql.createConnection({
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD
+            host: process.env.DB_HOST || 'codeaquariummysql.cpg6i88e4h6e.ap-south-1.rds.amazonaws.com:3307',
+            user: process.env.DB_USER || 'code_aqu_inv_user',
+            password: process.env.DB_PASSWORD || 'asdhSFBJ@45gf5'
         });
         await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`);
         await connection.end();
