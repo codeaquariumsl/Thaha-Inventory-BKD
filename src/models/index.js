@@ -80,10 +80,9 @@ InvoiceItem.belongsTo(Invoice, { foreignKey: 'invoiceId' });
 PurchaseOrder.hasMany(PurchaseOrderItem, { foreignKey: 'purchaseOrderId', as: 'items' });
 PurchaseOrderItem.belongsTo(PurchaseOrder, { foreignKey: 'purchaseOrderId' });
 
-// User Role Associations
+// Role Associations
 Role.hasMany(User, { foreignKey: 'roleId' });
 User.belongsTo(Role, { foreignKey: 'roleId' });
-
 
 const models = {
     Product,
@@ -95,7 +94,6 @@ const models = {
     Invoice,
     InvoiceItem,
     Payment,
-
     SalesReturn,
     PurchaseOrder,
     PurchaseOrderItem,
@@ -104,5 +102,12 @@ const models = {
     Role,
     User
 };
+
+// Force all table names to lowercase for cross-platform compatibility
+Object.values(models).forEach(model => {
+    if (model.tableName) {
+        model.tableName = model.tableName.toLowerCase();
+    }
+});
 
 module.exports = { sequelize, models };
