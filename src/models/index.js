@@ -13,6 +13,7 @@ const PurchaseOrderItem = require('./PurchaseOrderItem');
 const StockMovement = require('./StockMovement');
 const Category = require('./Category');
 const InvoiceItem = require('./InvoiceItem');
+const Color = require('./Color');
 
 const Role = require('./Role');
 const User = require('./User');
@@ -40,6 +41,10 @@ Supplier.hasMany(Product, { foreignKey: 'supplierId' });
 
 Product.belongsTo(Category, { foreignKey: 'categoryId' });
 Category.hasMany(Product, { foreignKey: 'categoryId' });
+
+// Product-Color Many-to-Many
+Product.belongsToMany(Color, { through: { model: 'ProductColors', unique: false }, foreignKey: 'productId', as: 'Colors' });
+Color.belongsToMany(Product, { through: { model: 'ProductColors', unique: false }, foreignKey: 'colorId' });
 
 // Customer Associations
 Customer.hasMany(SalesOrder, { foreignKey: 'customerId' });
@@ -100,7 +105,8 @@ const models = {
     StockMovement,
     Category,
     Role,
-    User
+    User,
+    Color
 };
 
 // Force all table names to lowercase for cross-platform compatibility

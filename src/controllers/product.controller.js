@@ -1,10 +1,19 @@
 const { models } = require('../models');
-const { Product, Supplier, Category } = models;
+const { Product, Supplier, Category, Color } = models;
+
+const colorInclude = { model: Color, as: 'Colors' };
 
 exports.createProduct = async (req, res) => {
     try {
-        const product = await Product.create(req.body);
-        res.status(201).json(product);
+        const { colorIds, ...productData } = req.body;
+        const product = await Product.create(productData);
+
+        if (colorIds && Array.isArray(colorIds)) {
+            await product.setColors(colorIds);
+        }
+
+        const createdProduct = await Product.findByPk(product.id, { include: [Supplier, Category, colorInclude] });
+        res.status(201).json(createdProduct);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -12,7 +21,7 @@ exports.createProduct = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await Product.findAll({ include: [Supplier, Category] });
+        const products = await Product.findAll({ include: [Supplier, Category, colorInclude] });
         res.status(200).json(products);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -21,7 +30,7 @@ exports.getAllProducts = async (req, res) => {
 
 exports.getProductById = async (req, res) => {
     try {
-        const product = await Product.findByPk(req.params.id, { include: [Supplier, Category] });
+        const product = await Product.findByPk(req.params.id, { include: [Supplier, Category, colorInclude] });
         if (!product) return res.status(404).json({ error: 'Product not found' });
         res.status(200).json(product);
     } catch (error) {
@@ -31,12 +40,20 @@ exports.getProductById = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
     try {
-        const [updated] = await Product.update(req.body, {
+        const { colorIds, ...productData } = req.body;
+        await Product.update(productData, {
             where: { id: req.params.id }
         });
-        if (!updated) return res.status(404).json({ error: 'Product not found' });
+
         const product = await Product.findByPk(req.params.id);
-        res.status(200).json(product);
+        if (!product) return res.status(404).json({ error: 'Product not found' });
+
+        if (colorIds && Array.isArray(colorIds)) {
+            await product.setColors(colorIds);
+        }
+
+        const updatedProduct = await Product.findByPk(req.params.id, { include: [Supplier, Category, colorInclude] });
+        res.status(200).json(updatedProduct);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

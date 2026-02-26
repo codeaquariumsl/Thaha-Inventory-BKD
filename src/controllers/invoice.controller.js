@@ -1,5 +1,6 @@
 const { sequelize, models } = require('../models');
 const { Invoice, InvoiceItem, SalesOrder, Customer, Product } = models;
+const { generateSequenceNumber } = require('../utils/numberGenerator');
 
 
 exports.createInvoice = async (req, res) => {
@@ -11,6 +12,11 @@ exports.createInvoice = async (req, res) => {
 
         if (orderData.orderType === 'Tax' && !canCreateTax) {
             orderData.orderType = 'General';
+        }
+
+        // Generate Invoice Number
+        if (!orderData.invoiceNumber) {
+            orderData.invoiceNumber = await generateSequenceNumber(Invoice, 'I', 'invoiceNumber');
         }
 
         const invoice = await Invoice.create(orderData, { transaction: t });
@@ -48,7 +54,8 @@ exports.getAllInvoices = async (req, res) => {
                 { model: SalesOrder },
                 { model: InvoiceItem, as: 'items', include: [Product] }
 
-            ]
+            ],
+            order: [['createdAt', 'DESC']]
         });
         res.status(200).json(invoices);
     } catch (error) {

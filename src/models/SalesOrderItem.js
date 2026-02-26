@@ -30,6 +30,10 @@ const SalesOrderItem = sequelize.define('SalesOrderItem', {
     total: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
+    },
+    colorId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 });
 

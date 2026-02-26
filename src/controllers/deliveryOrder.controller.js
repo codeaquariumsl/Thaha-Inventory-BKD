@@ -3,6 +3,7 @@ const Customer = require('../models/Customer');
 const Product = require('../models/Product');
 const SalesOrderItem = require('../models/SalesOrderItem');
 const { DeliveryOrder, SalesOrder, Invoice, InvoiceItem } = models;
+const { generateSequenceNumber } = require('../utils/numberGenerator');
 
 
 exports.createDeliveryOrder = async (req, res) => {
@@ -13,6 +14,11 @@ exports.createDeliveryOrder = async (req, res) => {
 
         if (orderData.orderType === 'Tax' && !canCreateTax) {
             orderData.orderType = 'General';
+        }
+
+        // Generate Delivery Number
+        if (!orderData.deliveryNumber) {
+            orderData.deliveryNumber = await generateSequenceNumber(DeliveryOrder, 'D', 'deliveryNumber');
         }
 
         const deliveryOrder = await DeliveryOrder.create(orderData);
@@ -35,7 +41,8 @@ exports.getAllDeliveryOrders = async (req, res) => {
                 model: SalesOrder,
                 include: [{ model: Customer },
                 { model: SalesOrderItem, as: 'items', include: [Product] }]
-            }]
+            }],
+            order: [['createdAt', 'DESC']]
         });
         res.status(200).json(deliveryOrders);
     } catch (error) {
@@ -122,9 +129,7 @@ exports.approveDeliveryOrder = async (req, res) => {
         // Auto Create Invoice
         const salesOrder = deliveryOrder.SalesOrder;
         if (salesOrder) {
-            const timestamp = Date.now().toString().slice(-6);
-            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            const invoiceNumber = `INV-${timestamp}${random}`;
+            const invoiceNumber = await generateSequenceNumber(Invoice, 'I', 'invoiceNumber');
 
             const invoice = await Invoice.create({
                 invoiceNumber: invoiceNumber,
@@ -148,7 +153,8 @@ exports.approveDeliveryOrder = async (req, res) => {
                     quantity: item.quantity,
                     price: item.price,
                     discount: item.discount,
-                    total: item.total
+                    total: item.total,
+                    colorId: item.colorId
                 }));
                 await InvoiceItem.bulkCreate(invoiceItems, { transaction: t });
             }

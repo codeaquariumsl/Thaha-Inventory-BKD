@@ -1,28 +1,32 @@
 const app = require('./src/app');
-const { sequelize } = require('./src/models');
-const mysql = require('mysql2/promise');
+const { sequelize, models } = require('./src/models');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 5001;
 
+// Helper: add a column if it doesn't exist
+async function addColumnIfNotExists(table, column, definition) {
+    try {
+        await sequelize.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition};`);
+        console.log(`✅ Added column: ${table}.${column}`);
+    } catch (err) {
+        if (err.parent?.code === 'ER_DUP_FIELDNAME') {
+            // Column already exists — that's fine
+        } else {
+            console.error(`Error adding ${table}.${column}:`, err.parent?.sqlMessage || err.message);
+        }
+    }
+}
+
 async function startServer() {
     try {
-        // Create DB if not exists
-        // const connection = await mysql.createConnection({
-        //     host: process.env.DB_HOST || 'codeaquariummysql.cpg6i88e4h6e.ap-south-1.rds.amazonaws.com',
-        //     port: process.env.DB_PORT || 3307,
-        //     user: process.env.DB_USER || 'code_aqu_inv_user',
-        //     password: process.env.DB_PASSWORD || 'asdhSFBJ@45gf5'
-        // });
-        // await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME || 'thaha_inventory'}\`;`);
-        // await connection.end();
-
-        // Sync Sequelize
         await sequelize.authenticate();
         console.log('Connection has been established successfully.');
 
-        // Sync models
-        // await sequelize.sync({ alter: true });
+        // Add colorId to item tables (safe — skips if already exists)
+        // await addColumnIfNotExists('salesorderitems', 'colorId', 'INTEGER NULL');
+        // await addColumnIfNotExists('invoiceitems', 'colorId', 'INTEGER NULL');
+
         console.log('Database synced.');
 
         app.listen(PORT, () => {

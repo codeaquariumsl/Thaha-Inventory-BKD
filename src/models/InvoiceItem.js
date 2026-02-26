@@ -30,6 +30,10 @@ const InvoiceItem = sequelize.define('InvoiceItem', {
     total: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
+    },
+    colorId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 });
 

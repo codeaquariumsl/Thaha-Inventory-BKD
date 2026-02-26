@@ -32,5 +32,6 @@ app.use('/api/categories', require('./routes/category.routes'));
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/roles', require('./routes/role.routes'));
+app.use('/api/colors', require('./routes/color.routes'));
 
 module.exports = app;

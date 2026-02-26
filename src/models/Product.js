@@ -14,7 +14,7 @@ const Product = sequelize.define('Product', {
     sku: {
         type: DataTypes.STRING,
         unique: true,
-        allowNull: false
+        allowNull: true
     },
     categoryId: {
         type: DataTypes.INTEGER,
@@ -25,7 +25,8 @@ const Product = sequelize.define('Product', {
         }
     },
     supplierId: {
-        type: DataTypes.INTEGER
+        type: DataTypes.INTEGER,
+        allowNull: true
     },
     price: {
         type: DataTypes.DECIMAL(10, 2),
@@ -33,7 +34,7 @@ const Product = sequelize.define('Product', {
     },
     cost: {
         type: DataTypes.DECIMAL(10, 2),
-        allowNull: false
+        allowNull: true
     },
     stockQuantity: {
         type: DataTypes.INTEGER,
@@ -49,6 +50,14 @@ const Product = sequelize.define('Product', {
     uom: {
         type: DataTypes.STRING,
         defaultValue: 'pcs'
+    },
+    type: {
+        type: DataTypes.ENUM('finished_good', 'raw_material'),
+        defaultValue: 'finished_good'
+    },
+    isHaveLid: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
 });
 

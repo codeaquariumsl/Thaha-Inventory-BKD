@@ -1,5 +1,6 @@
 const { sequelize, models } = require('../models');
 const { SalesOrder, SalesOrderItem, Customer, Product, DeliveryOrder } = models;
+const { generateSequenceNumber } = require('../utils/numberGenerator');
 
 exports.createSalesOrder = async (req, res) => {
     const t = await sequelize.transaction();
@@ -13,6 +14,9 @@ exports.createSalesOrder = async (req, res) => {
         if (orderData.orderType === 'Tax' && !canCreateTax) {
             orderData.orderType = 'General';
         }
+
+        // Generate Order Number
+        orderData.orderNumber = await generateSequenceNumber(SalesOrder, 'S', 'orderNumber');
 
         // Create Order
         const order = await SalesOrder.create(orderData, { transaction: t });
@@ -177,9 +181,7 @@ exports.approveSalesOrder = async (req, res) => {
         });
 
         if (!deliveryOrder) {
-            const timestamp = Date.now().toString().slice(-6);
-            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-            const deliveryNumber = `DO-${timestamp}${random}`;
+            const deliveryNumber = await generateSequenceNumber(DeliveryOrder, 'D', 'deliveryNumber');
 
             deliveryOrder = await DeliveryOrder.create({
                 deliveryNumber: deliveryNumber,
