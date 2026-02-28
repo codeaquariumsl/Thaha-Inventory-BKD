@@ -187,7 +187,7 @@ exports.approveSalesOrder = async (req, res) => {
                 deliveryNumber: deliveryNumber,
                 salesOrderId: order.id,
                 deliveryDate: order.deliveryDate,
-                shippingAddress: order.Customer?.address || 'No Address Provided',
+                deliveryAddress: order.Customer?.address || 'No Address Provided',
                 status: 'Pending',
                 orderType: order.orderType
             }, { transaction: t });

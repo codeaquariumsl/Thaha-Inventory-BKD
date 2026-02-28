@@ -14,9 +14,9 @@ const DeliveryOrder = sequelize.define('DeliveryOrder', {
     },
     salesOrderId: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true
     },
-    shippingAddress: {
+    deliveryAddress: {
         type: DataTypes.STRING,
         allowNull: false
     },
