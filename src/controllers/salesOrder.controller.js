@@ -16,7 +16,7 @@ exports.createSalesOrder = async (req, res) => {
         }
 
         // Generate Order Number
-        orderData.orderNumber = await generateSequenceNumber(SalesOrder, 'S', 'orderNumber');
+        orderData.orderNumber = await generateSequenceNumber(SalesOrder, 'TPIS', 'orderNumber');
 
         // Create Order
         const order = await SalesOrder.create(orderData, { transaction: t });
@@ -181,7 +181,7 @@ exports.approveSalesOrder = async (req, res) => {
         });
 
         if (!deliveryOrder) {
-            const deliveryNumber = await generateSequenceNumber(DeliveryOrder, 'D', 'deliveryNumber');
+            const deliveryNumber = await generateSequenceNumber(DeliveryOrder, 'TPID', 'deliveryNumber');
 
             deliveryOrder = await DeliveryOrder.create({
                 deliveryNumber: deliveryNumber,

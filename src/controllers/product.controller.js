@@ -19,10 +19,51 @@ exports.createProduct = async (req, res) => {
     }
 };
 
+const { Op } = require('sequelize');
+
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await Product.findAll({ include: [Supplier, Category, colorInclude] });
-        res.status(200).json(products);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const categoryId = req.query.categoryId || '';
+        const type = req.query.type || '';
+
+        const where = {};
+        if (search) {
+            where[Op.or] = [
+                { name: { [Op.like]: `%${search}%` } },
+                { sku: { [Op.like]: `%${search}%` } }
+            ];
+        }
+        if (categoryId && categoryId !== 'all') {
+            where.categoryId = categoryId;
+        }
+        if (type) {
+            where.type = type;
+        }
+
+        const { count, rows } = await Product.findAndCountAll({
+            where,
+            include: [
+                { model: Supplier },
+                { model: Category },
+                colorInclude
+            ],
+            distinct: true,
+            limit,
+            offset,
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.status(200).json({
+            data: rows,
+            total: count,
+            page,
+            limit,
+            totalPages: Math.ceil(count / limit)
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

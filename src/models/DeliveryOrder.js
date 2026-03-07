@@ -16,12 +16,35 @@ const DeliveryOrder = sequelize.define('DeliveryOrder', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    customerId: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
     deliveryAddress: {
         type: DataTypes.STRING,
         allowNull: false
     },
     trackingNumber: {
         type: DataTypes.STRING
+    },
+    notes: {
+        type: DataTypes.TEXT
+    },
+    subtotal: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00
+    },
+    tax: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00
+    },
+    discount: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00
+    },
+    total: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0.00
     },
     status: {
         type: DataTypes.ENUM('Pending', 'Approved', 'In Transit', 'Delivered', 'Cancelled'),

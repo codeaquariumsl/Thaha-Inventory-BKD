@@ -1,14 +1,13 @@
 const { sequelize, models } = require('../models');
-const Customer = require('../models/Customer');
-const Product = require('../models/Product');
-const SalesOrderItem = require('../models/SalesOrderItem');
-const { DeliveryOrder, SalesOrder, Invoice, InvoiceItem } = models;
+const { DeliveryOrder, SalesOrder, Invoice, InvoiceItem, DeliveryOrderItem, Customer, Product, SalesOrderItem } = models;
 const { generateSequenceNumber } = require('../utils/numberGenerator');
 
 
 exports.createDeliveryOrder = async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const orderData = { ...req.body };
+        const items = orderData.items || [];
         const allowedRoles = ['admin', 'tax_user'];
         const canCreateTax = req.user && allowedRoles.includes(req.user.role);
 
@@ -18,12 +17,29 @@ exports.createDeliveryOrder = async (req, res) => {
 
         // Generate Delivery Number
         if (!orderData.deliveryNumber) {
-            orderData.deliveryNumber = await generateSequenceNumber(DeliveryOrder, 'D', 'deliveryNumber');
+            orderData.deliveryNumber = await generateSequenceNumber(DeliveryOrder, 'TPID', 'deliveryNumber');
         }
 
-        const deliveryOrder = await DeliveryOrder.create(orderData);
+        const deliveryOrder = await DeliveryOrder.create(orderData, { transaction: t });
+
+        if (items.length > 0) {
+            const deliveryItems = items.map(item => ({
+                deliveryOrderId: deliveryOrder.id,
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                discount: item.discount || 0,
+                tax: item.tax || 0,
+                total: item.total,
+                colorId: item.colorId
+            }));
+            await DeliveryOrderItem.bulkCreate(deliveryItems, { transaction: t });
+        }
+
+        await t.commit();
         res.status(201).json(deliveryOrder);
     } catch (error) {
+        await t.rollback();
         res.status(400).json({ error: error.message });
     }
 };
@@ -37,11 +53,11 @@ exports.getAllDeliveryOrders = async (req, res) => {
 
         const deliveryOrders = await DeliveryOrder.findAll({
             where: whereClause,
-            include: [{
-                model: SalesOrder,
-                include: [{ model: Customer },
-                { model: SalesOrderItem, as: 'items', include: [Product] }]
-            }],
+            include: [
+                { model: Customer },
+                { model: SalesOrder },
+                { model: DeliveryOrderItem, as: 'items', include: [Product] }
+            ],
             order: [['createdAt', 'DESC']]
         });
         res.status(200).json(deliveryOrders);
@@ -59,7 +75,11 @@ exports.getDeliveryOrderById = async (req, res) => {
 
         const deliveryOrder = await DeliveryOrder.findOne({
             where: whereClause,
-            include: [{ model: SalesOrder }]
+            include: [
+                { model: Customer },
+                { model: SalesOrder },
+                { model: DeliveryOrderItem, as: 'items', include: [Product] }
+            ]
         });
         if (!deliveryOrder) return res.status(404).json({ error: 'Delivery Order not found' });
         res.status(200).json(deliveryOrder);
@@ -69,8 +89,10 @@ exports.getDeliveryOrderById = async (req, res) => {
 };
 
 exports.updateDeliveryOrder = async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const orderData = { ...req.body };
+        const items = orderData.items;
         const allowedRoles = ['admin', 'tax_user'];
         const canUpdateTax = req.user && allowedRoles.includes(req.user.role);
 
@@ -79,12 +101,46 @@ exports.updateDeliveryOrder = async (req, res) => {
         }
 
         const [updated] = await DeliveryOrder.update(orderData, {
-            where: { id: req.params.id }
+            where: { id: req.params.id },
+            transaction: t
         });
-        if (!updated) return res.status(404).json({ error: 'Delivery Order not found' });
-        const deliveryOrder = await DeliveryOrder.findByPk(req.params.id);
+
+        if (!updated) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Delivery Order not found' });
+        }
+
+        if (items) {
+            // Clear existing items and recreate
+            await DeliveryOrderItem.destroy({
+                where: { deliveryOrderId: req.params.id },
+                transaction: t
+            });
+
+            const deliveryItems = items.map(item => ({
+                deliveryOrderId: req.params.id,
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                discount: item.discount || 0,
+                tax: item.tax || 0,
+                total: item.total,
+                colorId: item.colorId
+            }));
+            await DeliveryOrderItem.bulkCreate(deliveryItems, { transaction: t });
+        }
+
+        await t.commit();
+        const deliveryOrder = await DeliveryOrder.findByPk(req.params.id, {
+            include: [
+                { model: Customer },
+                { model: SalesOrder },
+                { model: DeliveryOrderItem, as: 'items', include: [Product] }
+            ]
+        });
         res.status(200).json(deliveryOrder);
     } catch (error) {
+        await t.rollback();
         res.status(400).json({ error: error.message });
     }
 };
@@ -105,10 +161,10 @@ exports.approveDeliveryOrder = async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const deliveryOrder = await DeliveryOrder.findByPk(req.params.id, {
-            include: [{
-                model: SalesOrder,
-                include: [{ model: SalesOrderItem, as: 'items' }]
-            }],
+            include: [
+                { model: SalesOrder },
+                { model: DeliveryOrderItem, as: 'items' }
+            ],
             transaction: t
         });
 
@@ -127,38 +183,35 @@ exports.approveDeliveryOrder = async (req, res) => {
         await deliveryOrder.update({ status: 'Approved' }, { transaction: t });
 
         // Auto Create Invoice
-        const salesOrder = deliveryOrder.SalesOrder;
-        if (salesOrder) {
-            const invoiceNumber = await generateSequenceNumber(Invoice, 'I', 'invoiceNumber');
+        const invoiceNumber = await generateSequenceNumber(Invoice, 'TPII', 'invoiceNumber');
 
-            const invoice = await Invoice.create({
-                invoiceNumber: invoiceNumber,
-                salesOrderId: salesOrder.id,
-                customerId: salesOrder.customerId,
-                subtotal: salesOrder.subtotal,
-                tax: salesOrder.tax,
-                discount: salesOrder.discount,
-                total: salesOrder.total,
-                amountDue: salesOrder.total,
-                status: 'Draft',
-                orderType: deliveryOrder.orderType,
-                invoiceDate: new Date()
-            }, { transaction: t });
+        const invoice = await Invoice.create({
+            invoiceNumber: invoiceNumber,
+            salesOrderId: deliveryOrder.salesOrderId,
+            customerId: deliveryOrder.customerId,
+            subtotal: deliveryOrder.subtotal,
+            tax: deliveryOrder.tax,
+            discount: deliveryOrder.discount,
+            total: deliveryOrder.total,
+            amountDue: deliveryOrder.total,
+            status: 'Draft',
+            orderType: deliveryOrder.orderType,
+            invoiceDate: new Date(),
+            dueDate: deliveryOrder.deliveryDate || new Date()
+        }, { transaction: t });
 
-            // Create Invoice Items
-            if (salesOrder.items && salesOrder.items.length > 0) {
-                const invoiceItems = salesOrder.items.map(item => ({
-                    invoiceId: invoice.id,
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    price: item.price,
-                    discount: item.discount,
-                    total: item.total,
-                    colorId: item.colorId
-                }));
-                await InvoiceItem.bulkCreate(invoiceItems, { transaction: t });
-            }
-
+        // Create Invoice Items from Delivery Order Items
+        if (deliveryOrder.items && deliveryOrder.items.length > 0) {
+            const invoiceItems = deliveryOrder.items.map(item => ({
+                invoiceId: invoice.id,
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                discount: item.discount,
+                total: item.total,
+                colorId: item.colorId
+            }));
+            await InvoiceItem.bulkCreate(invoiceItems, { transaction: t });
         }
 
         await t.commit();

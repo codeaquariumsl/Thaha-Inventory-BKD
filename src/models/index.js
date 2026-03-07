@@ -13,6 +13,7 @@ const PurchaseOrderItem = require('./PurchaseOrderItem');
 const StockMovement = require('./StockMovement');
 const Category = require('./Category');
 const InvoiceItem = require('./InvoiceItem');
+const DeliveryOrderItem = require('./DeliveryOrderItem');
 const Color = require('./Color');
 
 const Role = require('./Role');
@@ -33,6 +34,9 @@ User.hasMany(StockMovement, { foreignKey: 'userId' });
 
 Product.hasMany(InvoiceItem, { foreignKey: 'productId' });
 InvoiceItem.belongsTo(Product, { foreignKey: 'productId' });
+
+Product.hasMany(DeliveryOrderItem, { foreignKey: 'productId' });
+DeliveryOrderItem.belongsTo(Product, { foreignKey: 'productId' });
 
 
 
@@ -56,6 +60,9 @@ Invoice.belongsTo(Customer, { foreignKey: 'customerId' });
 Customer.hasMany(Payment, { foreignKey: 'customerId' });
 Payment.belongsTo(Customer, { foreignKey: 'customerId' });
 
+Customer.hasMany(DeliveryOrder, { foreignKey: 'customerId' });
+DeliveryOrder.belongsTo(Customer, { foreignKey: 'customerId' });
+
 // Supplier Associations
 Supplier.hasMany(PurchaseOrder, { foreignKey: 'supplierId' });
 PurchaseOrder.belongsTo(Supplier, { foreignKey: 'supplierId' });
@@ -66,6 +73,9 @@ SalesOrderItem.belongsTo(SalesOrder, { foreignKey: 'salesOrderId' });
 
 SalesOrder.hasOne(DeliveryOrder, { foreignKey: 'salesOrderId' });
 DeliveryOrder.belongsTo(SalesOrder, { foreignKey: 'salesOrderId' });
+
+DeliveryOrder.hasMany(DeliveryOrderItem, { foreignKey: 'deliveryOrderId', as: 'items' });
+DeliveryOrderItem.belongsTo(DeliveryOrder, { foreignKey: 'deliveryOrderId' });
 
 SalesOrder.hasMany(Invoice, { foreignKey: 'salesOrderId' });
 Invoice.belongsTo(SalesOrder, { foreignKey: 'salesOrderId' });
@@ -106,7 +116,8 @@ const models = {
     Category,
     Role,
     User,
-    Color
+    Color,
+    DeliveryOrderItem
 };
 
 // Force all table names to lowercase for cross-platform compatibility

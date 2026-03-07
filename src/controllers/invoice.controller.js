@@ -16,7 +16,7 @@ exports.createInvoice = async (req, res) => {
 
         // Generate Invoice Number
         if (!orderData.invoiceNumber) {
-            orderData.invoiceNumber = await generateSequenceNumber(Invoice, 'I', 'invoiceNumber');
+            orderData.invoiceNumber = await generateSequenceNumber(Invoice, 'TPII', 'invoiceNumber');
         }
 
         const invoice = await Invoice.create(orderData, { transaction: t });
